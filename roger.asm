@@ -2,9 +2,6 @@
 
 	icl "SystemEquates.asm"
 
-	; Memory mapped registers
-;screenptr = $B0
-
 	; Graphics
 	org $4000
 	icl "Graphics.asm"
@@ -14,23 +11,15 @@
 	org $2000
 	
 	; Variables
+.struct ScrollLine
+	fine	.byte
+	coarse	.byte
+.ends
+
 scroll_delay		.byte 4
 
-	.local log1
-fine_scroll		.byte 0
-coarse_scroll		.byte 0
-	.endl
-	
-log2_fine_scroll	.byte 1
-log3_fine_scroll	.byte 0
-car1_fine_scroll	.byte 1
-car2_fine_scroll	.byte 0
-car3_fine_scroll	.byte 1
-log2_coarse_scroll	.byte 1
-log3_coarse_scroll	.byte 0
-car1_coarse_scroll	.byte 1
-car2_coarse_scroll	.byte 0
-car3_coarse_scroll	.byte 1
+logs 			dta ScrollLine [3] (0, 0) (1, 1) (0, 0)
+cars			dta ScrollLine [3] (1, 1) (0, 0) (1, 1)
 
 	; Program
 	.proc main
@@ -38,8 +27,8 @@ car3_coarse_scroll	.byte 1
 	; Setup graphics
 	mva #0 SDMCTL
 
-	; Copy first 40 bytes of each scrolling line into end buffer
-	ldx #40
+	; Duplicate start of each scrolling line to its end for continuous infinite scrolling
+	ldx #0
 copy_loop
 	mva screenmem.river1,x screenmem.river1_end,x
 	mva screenmem.river2,x screenmem.river2_end,x
@@ -50,7 +39,8 @@ copy_loop
 	mva screenmem.river7,x screenmem.river7_end,x
 	mva screenmem.river8,x screenmem.river8_end,x
 	mva screenmem.river9,x screenmem.river9_end,x
-	dex
+	inx
+	cpx #60
 	bne copy_loop
 	
 	; Point to display list
@@ -63,7 +53,7 @@ copy_loop
 	jsr SETVBV
 	
 	; setup DLI handler
-	mwa #dlist_playfield VDSLST
+	mwa #dli.playfield VDSLST
 	mva #192 NMIEN
 
 	; Enable ANTIC DMA
@@ -73,59 +63,60 @@ copy_loop
 	jmp *
 	.endp
 	
-	.proc dlist_playfield
+	.local dli
+	.proc playfield
 	; switch to custom character set
 	pha
-	lda #.HI(charset)
+	lda #>(charset)
 	sta WSYNC
 	sta CHBASE
 	; chain to next DLI handler
-	mwa #dlist_log1 VDSLST
+	mwa #log1 VDSLST
 	pla
 	rti
 	.endp
 
-	.proc dlist_log1
+	.proc log1
 	; set fine scroll for log1
 	pha
-	lda #15
-	sec
-	sbc log1.fine_scroll
+	lda logs[0].fine
+	eor #15
 	sta WSYNC
 	sta HSCROL
 	; chain to next DLI handler
-	mwa #dlist_log2 VDSLST
+	mwa #log2 VDSLST
 	pla
 	rti
 	.endp
 
-	.proc dlist_log2
+	.proc log2
 	; set fine scroll for log2
 	pha
-	lda #15
-	sec
-	sbc log2_fine_scroll
+	lda logs[1].fine
+	eor #15
 	sta WSYNC
 	sta HSCROL
 	; chain to next DLI handler
-	mwa #dlist_log3 VDSLST
+	mwa #log3 VDSLST
 	pla
 	rti
 	.endp
 
-	.proc dlist_log3
-	pha
+	.proc log3
 	; set fine scroll for log3
+	pha
 	lda #15
 	sec
-	sbc log3_fine_scroll
+	sbc logs[2].fine
 	sta WSYNC
 	sta HSCROL
 	; chain to next DLI handler
-	mwa #dlist_playfield VDSLST
+	mwa #dli.playfield VDSLST
 	pla
 	rti
 	.endp
+
+	.endl	; dli
 	
 	.proc vblank_handler
 	; Update playfield
@@ -134,68 +125,69 @@ copy_loop
 	jmp exit
 	
 scroll_playfield
-	lda #4
-	sta scroll_delay
 	;
 	; - Scroll log1
-	inc log1.fine_scroll
-	lda log1.fine_scroll
+	inc logs[0].fine
+	lda logs[0].fine
 	cmp #4
 	bcs @+
 	sec
 	sbc #4
-	sta log1.fine_scroll
-	inc log1.coarse_scroll
-	lda log1.coarse_scroll
+	sta logs[0].fine
+	inc logs[0].coarse
+	lda logs[0].coarse
 	cmp #(screenmem.river1_end - screenmem.river1)
 	bne @+
 	lda #0
-	sta log1.coarse_scroll
-@	lda log1.coarse_scroll
+	sta logs[0].coarse
+@	lda logs[0].coarse
 	sta dlist.river1
 	sta dlist.river2
 	sta dlist.river3
 	;
 	; - Scroll log2
-	dec log2_fine_scroll
+	dec logs[1].fine
+	lda logs[1].fine
 	bne @+
-	lda log2_fine_scroll
 	clc
 	adc #4
-	sta log2_fine_scroll
-	dec log2_coarse_scroll
-	lda log2_coarse_scroll
+	sta logs[1].fine
+	dec logs[1].coarse
+	lda logs[1].coarse
 	cmp #0
 	bne @+
 	lda #(screenmem.river4_end - screenmem.river4)
-	sta log2_coarse_scroll
-@	lda log2_coarse_scroll
+	sta logs[1].coarse
+@	lda logs[1].coarse
 	sta dlist.river4
 	sta dlist.river5
 	sta dlist.river6
 	;
 	; - Scroll log3
-	inc log3_fine_scroll
-	lda log3_fine_scroll
+	inc logs[2].fine
+	lda logs[2].fine
 	cmp #4
 	bcs @+
 	sec
 	sbc #4
-	sta log3_fine_scroll
-	inc log3_coarse_scroll
-	lda log3_coarse_scroll
+	sta logs[2].fine
+	inc logs[2].coarse
+	lda logs[2].coarse
 	cmp #(screenmem.river7_end - screenmem.river7)
 	bne @+
 	lda #0
-	sta log3_coarse_scroll
-@	lda log3_coarse_scroll
+	sta logs[2].coarse
+@	lda logs[2].coarse
 	sta dlist.river7
 	sta dlist.river8
 	sta dlist.river9
 
+	lda #4
+	sta scroll_delay
+
 exit
 	jmp XITVBV
-	.endp
-		
+	.endp	; vblank_handler 
+	
 	run main
 	

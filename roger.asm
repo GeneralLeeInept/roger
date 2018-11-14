@@ -53,7 +53,7 @@ copy_loop
 	jsr SETVBV
 	
 	; setup DLI handler
-	mwa #dli.playfield VDSLST
+	mwa #dli.handler VDSLST
 	mva #192 NMIEN
 
 	; Enable ANTIC DMA
@@ -66,60 +66,75 @@ copy_loop
 	.local dli
 	.proc playfield
 	; switch to custom character set
-	pha
 	lda #>(charset)
 	sta WSYNC
 	sta CHBASE
-	; chain to next DLI handler
-	mwa #log1 VDSLST
-	pla
-	rti
+	jmp exithandler
 	.endp
 
 	.proc log1
 	; set fine scroll for log1
-	pha
 	lda logs[0].fine
 	eor #15
 	sta WSYNC
 	sta HSCROL
-	; chain to next DLI handler
-	mwa #log2 VDSLST
-	pla
-	rti
+	jmp exithandler
 	.endp
 
 	.proc log2
 	; set fine scroll for log2
-	pha
 	lda logs[1].fine
 	eor #15
 	sta WSYNC
 	sta HSCROL
-	; chain to next DLI handler
-	mwa #log3 VDSLST
-	pla
-	rti
+	jmp exithandler
 	.endp
 
 	.proc log3
 	; set fine scroll for log3
-	pha
-	lda #15
-	sec
-	sbc logs[2].fine
+	lda logs[2].fine
+	eor #15
 	sta WSYNC
 	sta HSCROL
-	; chain to next DLI handler
-	mwa #dli.playfield VDSLST
+	jmp exithandler
+	.endp
+
+jumptable
+	.word	playfield-1
+	.word	log1-1
+	.word	log2-1
+	.word	log3-1
+	
+idx	.byte	0
+
+	.proc handler
+	pha
+	txa
+	pha
+	lda idx
+	and #3
+	asl
+	tax
+	lda jumptable+1,x
+	pha
+	lda jumptable,x
+	pha
+	rts
+	.endp
+
+	.proc exithandler
+	inc idx
+	pla
+	tax
 	pla
 	rti
 	.endp
-
-	.endl	; dli
 	
+	.endl	; dli
+		
 	.proc vblank_handler
 	; Update playfield
+	mva #0 dli.idx
 	dec scroll_delay
 	beq scroll_playfield
 	jmp exit

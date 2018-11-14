@@ -1,36 +1,32 @@
-	.local ANTIC
-FS	= $10
-VS	= $20
-LMS	= $40
-DLI	= $80
-	.endl
-	
 	; Dlist - 240 scanlines
 	.local dlist
-	.use ANTIC
+	FS	= $10
+	VS	= $20
+	LMS	= $40
+	DLI	= $80
 	
 	; Overscan (8 + 4 scanlines)
 	.byte $70, $30
 	
 	; Score area - 1 mode 2 line (8 scanlines)
-	.byte $02 + ANTIC.LMS + ANTIC.DLI, a(screenmem)
+	.byte $02 + LMS + DLI, a(screenmem)
 	
 	; Lilypads - 2 mode 4 lines (16 scanlines)
 	.byte $04
-	.byte $04 + ANTIC.DLI
+	.byte $04 + DLI
 	
 	; River - 9 mode 4 lines (72 scanlines)
 	.byte $04 + FS + LMS
 river1	.byte a(screenmem.river1)
 	.byte $04 + FS + LMS
 river2	.byte a(screenmem.river2)
-	.byte $04 + FS + LMS + ANTIC.DLI
+	.byte $04 + FS + LMS + DLI
 river3	.byte a(screenmem.river3)
 	.byte $04 + FS + LMS
 river4	.byte a(screenmem.river4)
 	.byte $04 + FS + LMS
 river5	.byte a(screenmem.river5)
-	.byte $04 + FS + LMS + ANTIC.DLI
+	.byte $04 + FS + LMS + DLI
 river6	.byte a(screenmem.river6)
 	.byte $04 + FS + LMS
 river7	.byte a(screenmem.river7)
@@ -73,8 +69,9 @@ river9	.byte a(screenmem.river9)
 scoreline
 	.byte "    SCORE 9999    LIVES 9    HI 9999    "
 lilypads
-	.byte $00,$00,$00,$00,$00,$00,$00,$01,$02,$00,$00,$00,$00,$00,$00,$01,$02,$00,$00,$00,$00,$00,$00,$01,$02,$00,$00,$00,$00,$00,$00,$01,$02,$00,$00,$00,$00,$00,$00,$00
-	.byte $00,$00,$00,$00,$00,$00,$00,$03,$04,$00,$00,$00,$00,$00,$00,$03,$04,$00,$00,$00,$00,$00,$00,$03,$04,$00,$00,$00,$00,$00,$00,$03,$04,$00,$00,$00,$00,$00,$00,$00
+	.he 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	.he 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	.he 01 01 01
 	
 	.align $100
 river1	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00

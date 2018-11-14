@@ -1,13 +1,11 @@
 	; Roger - a frogger-a-like for the Atari 800XL
-
-	icl "SystemEquates.asm"
-
+	icl "equates.inc"
+		
 	; Graphics
 	org $4000
-	icl "Graphics.asm"
-	icl "Sprites.asm"
-	icl "CharSet.asm"
-		
+	icl "graphics.asm"
+	icl "charset.asm"
+	
 	org $2000
 	
 	; Variables
@@ -24,9 +22,19 @@ cars			dta ScrollLine [3] (1, 1) (0, 0) (1, 1)
 	; Program
 	.proc main
 
-	; Setup graphics
+	; Turn off screen
 	mva #0 SDMCTL
 
+	jsr init
+
+	; Turn screen on
+	mva #$22 SDMCTL	
+	
+	; Loop
+	jmp *
+	.endp
+
+	.proc init
 	; Duplicate start of each scrolling line to its end for continuous infinite scrolling
 	ldx #0
 copy_loop
@@ -55,16 +63,12 @@ copy_loop
 	; setup DLI handler
 	mwa #dli.handler VDSLST
 	mva #192 NMIEN
-
-	; Enable ANTIC DMA
-	mva #$22 SDMCTL	
 	
-	; Loop
-	jmp *
+	rts
 	.endp
 	
 	.local dli
-	.proc playfield
+	.proc begin_playfield
 	; switch to custom character set
 	lda #>(charset)
 	sta WSYNC
@@ -72,38 +76,36 @@ copy_loop
 	jmp exithandler
 	.endp
 
-	.proc log1
+	.proc scroll
+	eor #15
+	sta WSYNC
+	sta HSCROL
+	jmp exithandler
+	.endp
+	
+	.proc scroll_log1
 	; set fine scroll for log1
 	lda logs[0].fine
-	eor #15
-	sta WSYNC
-	sta HSCROL
-	jmp exithandler
+	jmp scroll
 	.endp
 
-	.proc log2
+	.proc scroll_log2
 	; set fine scroll for log2
 	lda logs[1].fine
-	eor #15
-	sta WSYNC
-	sta HSCROL
-	jmp exithandler
+	jmp scroll
 	.endp
 
-	.proc log3
+	.proc scroll_log3
 	; set fine scroll for log3
 	lda logs[2].fine
-	eor #15
-	sta WSYNC
-	sta HSCROL
-	jmp exithandler
+	jmp scroll
 	.endp
 
 jumptable
-	.word	playfield-1
-	.word	log1-1
-	.word	log2-1
-	.word	log3-1
+	.word	begin_playfield-1
+	.word	scroll_log1-1
+	.word	scroll_log2-1
+	.word	scroll_log3-1
 	
 idx	.byte	0
 

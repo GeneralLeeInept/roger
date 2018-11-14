@@ -1,0 +1,13 @@
+; Atari 800 memory map equates
+
+VDSLST	= $0200
+SDMCTL	= $022F
+SDLSTL	= $0230
+
+HSCROL	= $D404
+CHBASE	= $D409
+WSYNC  	= $D40A
+NMIEN 	= $D40E
+
+SETVBV	= $E45C
+XITVBV	= $E462

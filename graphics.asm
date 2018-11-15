@@ -1,10 +1,11 @@
 	; Dlist - 240 scanlines
+	.align $400
 	.local dlist
 	FS	= $10
 	VS	= $20
 	LMS	= $40
 	DLI	= $80
-	
+
 	; Overscan (8 + 4 scanlines)
 	.byte $70, $30
 	
@@ -32,7 +33,7 @@ river6	.byte a(screenmem.river6)
 river7	.byte a(screenmem.river7)
 	.byte $04 + FS + LMS
 river8	.byte a(screenmem.river8)
-	.byte $04 + FS + LMS
+	.byte $04 + FS + LMS + DLI
 river9	.byte a(screenmem.river9)
 
 	;.byte $41, .LO(dlist), .HI(dlist)
@@ -40,18 +41,18 @@ river9	.byte a(screenmem.river9)
 	; River bank - 3 mode 4 lines (24 scanlines)
 	.byte $04 + LMS, a(screenmem.riverbank)
 	.byte $04
-	.byte $04
+	.byte $04 + DLI
 	
 	; Road - 9 mode 4 lines (72 scanlines)
-	.byte $04 + LMS, a(screenmem.road1)
-	.byte $04 + LMS, a(screenmem.road2)
-	.byte $04 + LMS, a(screenmem.road3)
-	.byte $04 + LMS, a(screenmem.road4)
-	.byte $04 + LMS, a(screenmem.road5)
-	.byte $04 + LMS, a(screenmem.road6)
-	.byte $04 + LMS, a(screenmem.road7)
-	.byte $04 + LMS, a(screenmem.road8)
-	.byte $04 + LMS, a(screenmem.road9)
+	.byte $04 + FS + LMS, a(screenmem.road1)
+	.byte $04 + FS + LMS, a(screenmem.road2)
+	.byte $04 + FS + LMS + DLI, a(screenmem.road3)
+	.byte $04 + FS + LMS, a(screenmem.road4)
+	.byte $04 + FS + LMS, a(screenmem.road5)
+	.byte $04 + FS + LMS + DLI, a(screenmem.road6)
+	.byte $04 + FS + LMS, a(screenmem.road7)
+	.byte $04 + FS + LMS, a(screenmem.road8)
+	.byte $04 + FS + LMS + DLI, a(screenmem.road9)
 	
 	; Footpath - 3 mode 4 lines (24 scanlines)
 	.byte $04 + LMS, a(screenmem.footpath)
@@ -71,7 +72,6 @@ scoreline
 lilypads
 	.he 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 	.he 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-	.he 01 01 01
 	
 	.align $100
 river1	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
@@ -169,7 +169,7 @@ road2	.byte $1b,$1c,$1d,$1e,$00,$00,$24,$25,$26,$27,$00
 	.byte $1b,$1c,$1d,$1e,$00,$00,$24,$25,$26,$27,$00
 	.ds 60
 
-road3	.byte $24,$27,$2A,$2D,$30,$33,$36,$39,$3C,$3F,$42,$45,$48,$4B,$4E,$51,$54,$57,$5A,$5D,$60,$63,$66,$69,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	
+road3	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 road4	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 road5	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 road6	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00	

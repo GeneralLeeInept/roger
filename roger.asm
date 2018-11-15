@@ -1,27 +1,19 @@
 	; Roger - a frogger-a-like for the Atari 800XL
-	icl "equates.inc"
-		
-	; Graphics
-	org $4000
-	icl "graphics.asm"
-	icl "charset.asm"
+	icl "equates.asm"
+	
+.struct ScrollLine
+    fine .byte
+    coarse .byte
+.ends
+
+	org $80
+scroll_delay	.byte 4
+scroll_state	dta ScrollLine [5] (0,0) (1,1) (0,0) (1,1) (0,0) (1,1)
 	
 	org $2000
 	
-	; Variables
-.struct ScrollLine
-	fine	.byte
-	coarse	.byte
-.ends
-
-scroll_delay		.byte 4
-
-logs 			dta ScrollLine [3] (0, 0) (1, 1) (0, 0)
-cars			dta ScrollLine [3] (1, 1) (0, 0) (1, 1)
-
-	; Program
 	.proc main
-
+	
 	; Turn off screen
 	mva #0 SDMCTL
 
@@ -60,9 +52,13 @@ copy_loop
 	ldy #.LO(vblank_handler)
 	jsr SETVBV
 	
-	; setup DLI handler
+	; Setup DLI handler
 	mwa #dli.handler VDSLST
 	mva #192 NMIEN
+	
+	; 
+	mva #$08 COLOR1
+	mva #$00 COLOR2
 	
 	rts
 	.endp
@@ -70,43 +66,73 @@ copy_loop
 	.local dli
 	.proc begin_playfield
 	; switch to custom character set
+	mva #$83 COLBK
 	lda #>(charset)
 	sta WSYNC
 	sta CHBASE
 	jmp exithandler
 	.endp
 
-	.proc scroll
-	eor #15
-	sta WSYNC
-	sta HSCROL
-	jmp exithandler
-	.endp
+	.macro set_hscroll amt
+	  lda :amt
+	  eor #15
+	  sta WSYNC
+	  sta HSCROL
+	.endm
 	
 	.proc scroll_log1
-	; set fine scroll for log1
-	lda logs[0].fine
-	jmp scroll
+	set_hscroll scroll_state[0].fine
+	jmp exithandler
 	.endp
 
 	.proc scroll_log2
-	; set fine scroll for log2
-	lda logs[1].fine
-	jmp scroll
+	set_hscroll scroll_state[1].fine
+	jmp exithandler
 	.endp
 
 	.proc scroll_log3
-	; set fine scroll for log3
-	lda logs[2].fine
-	jmp scroll
+	set_hscroll scroll_state[0].fine
+	jmp exithandler
 	.endp
 
+	.proc begin_bank
+	mva #$C6 COLBK
+	jmp exithandler
+	.endp
+	
+	.proc scroll_road1
+	mva #$04 COLBK
+	;set_hscroll scroll_state[1].fine
+	jmp exithandler
+	.endp
+	
+	.proc scroll_road2
+	mva #$08 COLBK
+	;set_hscroll scroll_state[4].fine
+	jmp exithandler
+	.endp
+
+	.proc scroll_road3
+	mva #$04 COLBK
+	;set_hscroll scroll_state[5].fine
+	jmp exithandler
+	.endp
+	
+	.proc begin_footpath
+	mva #$0E COLBK
+	jmp exithandler
+	.endp
+	
 jumptable
 	.word	begin_playfield-1
 	.word	scroll_log1-1
 	.word	scroll_log2-1
 	.word	scroll_log3-1
-	
+	.word	begin_bank-1
+	.word	scroll_road1-1
+	.word	scroll_road2-1
+	.word	scroll_road3-1
+	.word	begin_footpath-1
 idx	.byte	0
 
 	.proc handler
@@ -114,7 +140,6 @@ idx	.byte	0
 	txa
 	pha
 	lda idx
-	and #3
 	asl
 	tax
 	lda jumptable+1,x
@@ -144,57 +169,57 @@ idx	.byte	0
 scroll_playfield
 	;
 	; - Scroll log1
-	inc logs[0].fine
-	lda logs[0].fine
+	inc scroll_state[0].fine
+	lda scroll_state[0].fine
 	cmp #4
 	bcs @+
 	sec
 	sbc #4
-	sta logs[0].fine
-	inc logs[0].coarse
-	lda logs[0].coarse
+	sta scroll_state[0].fine
+	inc scroll_state[0].coarse
+	lda scroll_state[0].coarse
 	cmp #(screenmem.river1_end - screenmem.river1)
 	bne @+
 	lda #0
-	sta logs[0].coarse
-@	lda logs[0].coarse
+	sta scroll_state[0].coarse
+@	lda scroll_state[0].coarse
 	sta dlist.river1
 	sta dlist.river2
 	sta dlist.river3
 	;
 	; - Scroll log2
-	dec logs[1].fine
-	lda logs[1].fine
+	dec scroll_state[1].fine
+	lda scroll_state[1].fine
 	bne @+
 	clc
 	adc #4
-	sta logs[1].fine
-	dec logs[1].coarse
-	lda logs[1].coarse
+	sta scroll_state[1].fine
+	dec scroll_state[1].coarse
+	lda scroll_state[1].coarse
 	cmp #0
 	bne @+
 	lda #(screenmem.river4_end - screenmem.river4)
-	sta logs[1].coarse
-@	lda logs[1].coarse
+	sta scroll_state[1].coarse
+@	lda scroll_state[1].coarse
 	sta dlist.river4
 	sta dlist.river5
 	sta dlist.river6
 	;
 	; - Scroll log3
-	inc logs[2].fine
-	lda logs[2].fine
+	inc scroll_state[2].fine
+	lda scroll_state[2].fine
 	cmp #4
 	bcs @+
 	sec
 	sbc #4
-	sta logs[2].fine
-	inc logs[2].coarse
-	lda logs[2].coarse
+	sta scroll_state[2].fine
+	inc scroll_state[2].coarse
+	lda scroll_state[2].coarse
 	cmp #(screenmem.river7_end - screenmem.river7)
 	bne @+
 	lda #0
-	sta logs[2].coarse
-@	lda logs[2].coarse
+	sta scroll_state[2].coarse
+@	lda scroll_state[2].coarse
 	sta dlist.river7
 	sta dlist.river8
 	sta dlist.river9
@@ -205,6 +230,10 @@ scroll_playfield
 exit
 	jmp XITVBV
 	.endp	; vblank_handler 
+
+	; Graphics
+	icl "graphics.asm"
+	icl "charset.asm"
 	
 	run main
 	

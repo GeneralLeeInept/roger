@@ -1,12 +1,19 @@
 	; Roger - a frogger-a-like for the Atari 800XL
 	icl "equates.asm"
-	
+
+.struct RegisterSav
+    a	.byte
+    x	.byte
+    y	.byte
+.ends
+
 .struct ScrollLine
-    fine .byte
-    coarse .byte
+    fine	.byte
+    coarse	.byte
 .ends
 
 	org $80
+registers	RegisterSav
 scroll_delay	.byte 4
 scroll_state	dta ScrollLine [5] (0,0) (1,1) (0,0) (1,1) (0,0) (1,1)
 	
@@ -53,7 +60,7 @@ copy_loop
 	jsr SETVBV
 	
 	; Setup DLI handler
-	mwa #dli.handler VDSLST
+	mwa #dli.begin_playfield VDSLST
 	mva #192 NMIEN
 	
 	; 
@@ -64,15 +71,54 @@ copy_loop
 	.endp
 	
 	.local dli
-	.proc begin_playfield
-	; switch to custom character set
-	mva #$83 COLBK
-	lda #>(charset)
-	sta WSYNC
-	sta CHBASE
-	jmp exithandler
-	.endp
+jumptable_lo
+	.byte	<begin_playfield
+	.byte	<scroll_log1
+	.byte	<scroll_log2
+	.byte	<scroll_log3
+	.byte	<begin_bank
+	.byte	<scroll_road1
+	.byte	<scroll_road2
+	.byte	<scroll_road3
+	.byte	<begin_footpath
 
+jumptable_hi
+	.byte	>begin_playfield
+	.byte	>scroll_log1
+	.byte	>scroll_log2
+	.byte	>scroll_log3
+	.byte	>begin_bank
+	.byte	>scroll_road1
+	.byte	>scroll_road2
+	.byte	>scroll_road3
+	.byte	>begin_footpath
+
+jumptable_idx
+	.byte	0
+
+	.macro beginhandler
+	  sta registers.a
+	  stx registers.x
+	.endm
+	
+	.macro endhandler
+	  inc jumptable_idx
+	  ldx jumptable_idx
+	  lda jumptable_lo,x
+	  sta VDSLST
+	  lda jumptable_hi,x
+	  sta VDSLST+1
+	  lda registers.a
+	  ldx registers.x
+	  rti
+	.endm
+	
+	.macro set_colbk col
+	  lda :col
+	  sta WSYNC
+	  sta COLBK
+	.endm
+	
 	.macro set_hscroll amt
 	  lda :amt
 	  eor #15
@@ -80,88 +126,80 @@ copy_loop
 	  sta HSCROL
 	.endm
 	
+	.macro set_colbk_hscroll col amt
+	  lda :col
+	  ldx :amt
+	  sta WSYNC
+	  sta COLBK
+	  stx HSCROL
+	.endm
+	
+	.proc begin_playfield
+	; switch to custom character set
+	beginhandler
+	lda #$83
+	ldx #>(charset)
+	sta WSYNC
+	sta COLBK
+	stx CHBASE
+	endhandler
+	.endp
+
 	.proc scroll_log1
+	beginhandler
 	set_hscroll scroll_state[0].fine
-	jmp exithandler
+	endhandler
 	.endp
 
 	.proc scroll_log2
+	beginhandler
 	set_hscroll scroll_state[1].fine
-	jmp exithandler
+	endhandler
 	.endp
 
 	.proc scroll_log3
+	beginhandler
 	set_hscroll scroll_state[0].fine
-	jmp exithandler
+	endhandler
 	.endp
 
 	.proc begin_bank
-	mva #$C6 COLBK
-	jmp exithandler
+	beginhandler
+	set_colbk #$C6
+	endhandler
 	.endp
 	
 	.proc scroll_road1
-	mva #$04 COLBK
-	;set_hscroll scroll_state[1].fine
-	jmp exithandler
+	beginhandler
+	set_colbk_hscroll #$04 scroll_state[1].fine
+	endhandler
 	.endp
 	
 	.proc scroll_road2
-	mva #$08 COLBK
+	beginhandler
+	set_colbk #$08
 	;set_hscroll scroll_state[4].fine
-	jmp exithandler
+	endhandler
 	.endp
 
 	.proc scroll_road3
-	mva #$04 COLBK
+	beginhandler
+	set_colbk #$04
 	;set_hscroll scroll_state[5].fine
-	jmp exithandler
+	endhandler
 	.endp
 	
 	.proc begin_footpath
-	mva #$0E COLBK
-	jmp exithandler
-	.endp
-	
-jumptable
-	.word	begin_playfield-1
-	.word	scroll_log1-1
-	.word	scroll_log2-1
-	.word	scroll_log3-1
-	.word	begin_bank-1
-	.word	scroll_road1-1
-	.word	scroll_road2-1
-	.word	scroll_road3-1
-	.word	begin_footpath-1
-idx	.byte	0
-
-	.proc handler
-	pha
-	txa
-	pha
-	lda idx
-	asl
-	tax
-	lda jumptable+1,x
-	pha
-	lda jumptable,x
-	pha
-	rts
-	.endp
-
-	.proc exithandler
-	inc idx
-	pla
-	tax
-	pla
-	rti
+	beginhandler
+	set_colbk #$0e
+	endhandler
 	.endp
 	
 	.endl	; dli
 		
 	.proc vblank_handler
-	; Update playfield
-	mva #0 dli.idx
+	mwa #dli.begin_playfield VDSLST
+	mva #0 dli.jumptable_idx
 	dec scroll_delay
 	beq scroll_playfield
 	jmp exit

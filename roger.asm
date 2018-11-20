@@ -48,7 +48,7 @@ copy_loop
 	mva screenmem.river8,x screenmem.river8_end,x
 	mva screenmem.river9,x screenmem.river9_end,x
 	inx
-	cpx #44
+	cpx #60
 	bne copy_loop
 	
 	; Copy ROM font characters
@@ -306,9 +306,10 @@ text	.ds	$400
 river	.ds	$400
 road	.ds	$400
 	.endl
+	
 	; Graphics
 	icl "graphics.asm"
-
+	icl "charset.asm"
  	
 	run main
 	

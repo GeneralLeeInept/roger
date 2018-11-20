@@ -20,13 +20,14 @@ scroll_state	dta ScrollLine [5] (0,0) (1,1) (0,0) (1,1) (0,0) (1,1)
 	jsr init
 
 	; Turn screen on
-	mva #$22 SDMCTL	
+	mva #$63 SDMCTL	
 	
 	; Loop
 	jmp *
 	.endp
 
 	.proc init
+	
 	; Duplicate start of each scrolling line to its end for continuous infinite scrolling
 	ldx #0
 copy_loop
@@ -40,11 +41,40 @@ copy_loop
 	mva screenmem.river8,x screenmem.river8_end,x
 	mva screenmem.river9,x screenmem.river9_end,x
 	inx
-	cpx #60
+	cpx #44
 	bne copy_loop
 	
+	; Copy ROM font characters
+	mva #$70 $80
+	mva #$e0 $81 
+	mva #$67 $82 
+	mva #$01 $83 
+	mva #$70 $84
+	mva #>(charsets.text) $85
+	ldy #0
+	
+copy_rom_loop
+	lda ($80),y
+	sta ($84),y
+	inc $80
+	bne @+
+	inc $81
+
+@	inc $84
+	bne @+
+	inc $85
+	
+@	lda $82
+	bne @+
+	lda $83
+	beq @+1
+	dec $83
+
+@	dec $82
+	jmp copy_rom_loop
+	
 	; Point to display list
-	mwa #dlist SDLSTL
+@	mwa #dlist SDLSTL
 	
 	; Setup VBLANK handler
 	lda #07
@@ -67,7 +97,7 @@ copy_loop
 	.proc begin_playfield
 	; switch to custom character set
 	mva #$83 COLBK
-	lda #>(charset)
+	lda #>(charsets.text)
 	sta WSYNC
 	sta CHBASE
 	jmp exithandler
@@ -231,9 +261,16 @@ exit
 	jmp XITVBV
 	.endp	; vblank_handler 
 
+	; character sets
+	.align $400
+	.local charsets	
+text	.ds	$400
+river	.ds	$400
+road	.ds	$400
+	.endl
 	; Graphics
 	icl "graphics.asm"
-	icl "charset.asm"
-	
+
+ 	
 	run main
 	

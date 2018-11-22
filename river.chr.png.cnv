@@ -1,0 +1,42 @@
+#WUDSN IDE Converter Parameters
+#Thu Nov 22 13:29:16 AEDT 2018
+converterDirection=IMAGE_TO_FILES
+filesConverterParameters.converterId=
+filesConverterParameters.imageAspect.factorX=1
+filesConverterParameters.imageAspect.factorY=1
+filesConverterParameters.displayAspect.factorX=1
+filesConverterParameters.displayAspect.factorY=1
+filesConverterParameters.displayShrinkToFit=false
+filesConverterParameters.displayZoomToFit=true
+filesConverterParameters.sourceFiles=0
+filesConverterParameters.imageFilePath=
+filesConverterParameters.columns=40
+filesConverterParameters.rows=24
+filesConverterParameters.spacingColor.red=0
+filesConverterParameters.spacingColor.green=0
+filesConverterParameters.spacingColor.blue=128
+filesConverterParameters.spacingWidth=0
+filesConverterParameters.palette=HIRES_1
+filesConverterParameters.paletteType=ATARI_DEFAULT
+filesConverterParameters.paletteRGBs=0
+imageConverterParameters.converterId=com.wudsn.ide.gfx.converter.generic.CharSet1x1MultiColorConverter
+imageConverterParameters.imageAspect.factorX=4
+imageConverterParameters.imageAspect.factorY=4
+imageConverterParameters.displayAspect.factorX=4
+imageConverterParameters.displayAspect.factorY=4
+imageConverterParameters.displayShrinkToFit=true
+imageConverterParameters.displayZoomToFit=false
+imageConverterParameters.imageFilePath=river.chr.png
+imageConverterParameters.targetFiles=10
+imageConverterParameters.targetFiles.0.path=river.chr
+imageConverterParameters.targetFiles.1.path=
+imageConverterParameters.targetFiles.2.path=
+imageConverterParameters.targetFiles.3.path=
+imageConverterParameters.targetFiles.4.path=
+imageConverterParameters.targetFiles.5.path=
+imageConverterParameters.targetFiles.6.path=
+imageConverterParameters.targetFiles.7.path=
+imageConverterParameters.targetFiles.8.path=
+imageConverterParameters.targetFiles.9.path=
+imageConverterParameters.useDefaultScript=false
+imageConverterParameters.script=function convertToFileData(data) {\r\n\tvar columns \= data.getImageDataWidth()  / 4;\r\n\tvar rows    \= data.getImageDataHeight() / 8;\r\n\tvar chars   \= 256;\r\n\r\n\tvar char \= 0;\r\n\tvar bytes \= [];\r\n\tvar offset \= 0;\r\n\tfor (var r \= 0; r < rows; r++) {\r\n\t\tfor (var c \= 0; c < columns; c++) {\r\n\t\t\tif (char < chars) {\r\n\t\t\t\tfor (var l\=0;l<8;l++) {\r\n\t\t\t\t\tvar b \= 0;\r\n\t\t\t\t\tvar x,y,c1,c2,c3,c4;\r\n\t\t\t\t\tx \= c*4;\r\n\t\t\t\t\ty \= r*8 + l;\r\n\t\t\t\t\tc1 \= data.getPixel(x, y) & 0x3;\r\n\t\t\t\t\tc2 \= data.getPixel(x+1, y) & 0x3;\r\n\t\t\t\t\tc3 \= data.getPixel(x+2, y) & 0x3;\r\n\t\t\t\t\tc4 \= data.getPixel(x+3, y) & 0x3;\r\n\t\t\t\t\tb \= c1 << 6 | c2 << 4 | c3 << 2 | c4; \r\n\t\t\t\t\tbytes[offset++] \= b;\r\n    \t\t\t}\r\n\t\t\tchar++;\r\n\t\t\t}\r\n\t\t}\r\n\t}\r\n\tdata.setTargetFileObject(0, bytes);\r\n}

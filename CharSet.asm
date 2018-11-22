@@ -1,4 +1,4 @@
 	.align $400
 	.local charset
-	ins 'charset.chr'
+	ins 'river.chr'
 	.endl ; chars

@@ -12,9 +12,8 @@
 	; Score area - 1 mode 2 line (8 scanlines)
 	.byte $02 + LMS + DLI, a(screenmem)
 	
-	; Lilypads - 2 mode 4 lines (16 scanlines)
-	.byte $04
-	.byte $04 + DLI
+	; Goal area - 3 mode 4 lines (16 scanlines)
+	.byte $04, $04, $04 + DLI
 	
 	; River - 9 mode 4 lines (72 scanlines)
 	.byte $04 + FS + LMS
@@ -68,10 +67,12 @@ river9	.byte a(screenmem.river9)
 	.align $1000
 	.local screenmem
 scoreline
-	.byte "    SCORE 9999    LIVES 9    HI 9999    "
+	;.byte "        SCORE 9999    LIVES 9    HI 9999       "
+	.byte "    0123456789012345678901234567890123456789 "
 lilypads
-	.he 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-	.he 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+	.he 00 00 00 00 00 00 01 02 01 02 05 06 01 02 01 02 01 02 05 06 01 02 01 02 01 02 05 06 01 02 01 02 01 02 05 06 01 02 01 02 01 02 05 06 01 02 01 02
+	.he 00 00 00 00 00 00 01 02 01 0a 00 00 0b 02 01 02 01 0a 00 00 0b 02 01 02 01 0a 00 00 0b 02 01 02 01 0a 00 00 0b 02 01 02 01 0a 00 00 0b 02 01 02 
+	.he 00 00 00 00 00 00 05 06 0d 0e 00 00 0f 10 05 06 0d 0e 00 00 0f 10 05 06 0d 0e 00 00 0f 10 05 06 0d 0e 00 00 0f 10 05 06 0d 0e 00 00 0f 10 05 06
 	
 	.align $100
 river1	.byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00

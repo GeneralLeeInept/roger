@@ -27,7 +27,7 @@ scroll_state	dta ScrollLine [5] (0,0) (1,1) (0,0) (1,1) (0,0) (1,1)
 	jsr init
 
 	; Turn screen on
-	mva #$63 SDMCTL	
+	mva #35 SDMCTL	
 	
 	; Loop
 	jmp *
@@ -50,35 +50,6 @@ copy_loop
 	inx
 	cpx #60
 	bne copy_loop
-	
-	; Copy ROM font characters
-	mva #$70 $80
-	mva #$e0 $81 
-	mva #$67 $82 
-	mva #$01 $83 
-	mva #$70 $84
-	mva #>(charsets.text) $85
-	ldy #0
-	
-copy_rom_loop
-	lda ($80),y
-	sta ($84),y
-	inc $80
-	bne @+
-	inc $81
-
-@	inc $84
-	bne @+
-	inc $85
-	
-@	lda $82
-	bne @+
-	lda $83
-	beq @+1
-	dec $83
-
-@	dec $82
-	jmp copy_rom_loop
 	
 	; Point to display list
 @	mwa #dlist SDLSTL
@@ -177,6 +148,7 @@ jumptable_idx
 
 	.proc scroll_log1
 	beginhandler
+	;set_colbk_hscroll #$83 scroll_state[0].fine
 	set_hscroll scroll_state[0].fine
 	endhandler
 	.endp

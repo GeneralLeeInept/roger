@@ -13,25 +13,17 @@
 .ends
 
 	org $80
+copysrc		.word $0000
+copydest	.word $0000
 registers	RegisterSav
-scroll_delay	.byte 4
 scroll_state	dta ScrollLine [5] (0,0) (1,1) (0,0) (1,1) (0,0) (1,1)
 	
 	org $2000
-	
-	.proc main
-	
-	; Turn off screen
-	mva #0 SDMCTL
 
-	jsr init
-
-	; Turn screen on
-	mva #35 SDMCTL	
-	
-	; Loop
-	jmp *
-	.endp
+	.local vars
+scroll_delay	.byte 4
+animtime	.byte 15
+	.endl	; vars
 
 	.proc init
 	
@@ -69,7 +61,23 @@ copy_loop
 	mva #$00 COLOR2
 	
 	rts
-	.endp
+	
+	.endp	; init
+
+	.proc main
+	
+	; Turn off screen
+	mva #0 SDMCTL
+
+	jsr init
+
+	; Turn screen on
+	mva #35 SDMCTL	
+	
+	; Loop
+	jmp *
+
+	.endp	; main
 	
 	.local dli
 jumptable_lo
@@ -202,7 +210,37 @@ jumptable_idx
 	.proc vblank_handler
 	mwa #dli.begin_playfield VDSLST
 	mva #0 dli.jumptable_idx
-	dec scroll_delay
+	dec vars.animtime
+	beq animate_playfield
+	jmp check_scroll
+	
+animate_playfield
+	mva #15 vars.animtime
+	
+	; Animate turtles
+	inc turtles.frame
+	ldx turtles.frame
+	lda turtles.sequence,x
+	bpl @+
+	ldx #0
+	stx turtles.frame	
+	lda turtles.sequence,x
+@	tax
+	lda turtles.framesl,x
+	sta copysrc
+	lda turtles.framesh,x
+	sta copysrc+1
+	mwa turtles.chars copydest
+	ldy #$40
+	
+@	dey
+	bmi check_scroll
+	lda (copysrc),y 
+	sta (copydest),y
+	jmp @-
+	 
+check_scroll
+	dec vars.scroll_delay
 	beq scroll_playfield
 	jmp exit
 	
@@ -264,8 +302,7 @@ scroll_playfield
 	sta dlist.river8
 	sta dlist.river9
 
-	lda #4
-	sta scroll_delay
+	mva #4 vars.scroll_delay
 
 exit
 	jmp XITVBV
@@ -283,5 +320,16 @@ road	.ds	$400
 	icl "graphics.asm"
 	icl "charset.asm"
  	
+ 	; Turtles
+	.local turtles
+bits	ins "turtle_strip.chr"
+framesl	.byte <(bits+$00),<(bits+$40),<(bits+$80),<(bits+$C0),<(bits+$100),<(bits+$140)
+framesh	.byte >(bits+$00),>(bits+$40),>(bits+$80),>(bits+$C0),>(bits+$100),>(bits+$140)
+chars	.word charset+$88
+sequence
+	.byte 5, 5, 5, 5, 5, 4, 3, 2, 1, 0, 0, 0, 0, 1, 2, 3, 4, 5, $ff
+frame	.byte 0
+
+	.endl 
 	run main
 	

@@ -1,5 +1,11 @@
-	; Roger - a frogger-a-like for the Atari 800XL
+; Roger - a frogger-a-like for the Atari 800XL
+;
+; @com.wudsn.ide.asm.mainsourcefile=roger.asm
+; @com.wudsn.ide.asm.outputfileextension=.xex
+
 	icl "equates.asm"
+
+	run main
 
 .struct RegisterSav
     a	.byte
@@ -16,7 +22,7 @@
 copysrc		.word $0000
 copydest	.word $0000
 registers	RegisterSav
-scroll_state	dta ScrollLine [5] (0,0) (1,1) (0,0) (1,1) (0,0) (1,1)
+scroll_state	dta ScrollLine [9]
 	
 	org $2000
 
@@ -29,16 +35,26 @@ animtime	.byte 15
 	
 	; Duplicate start of each scrolling line to its end for continuous infinite scrolling
 	ldx #0
+	
 copy_loop
-	mva screenmem.river1,x screenmem.river1_end,x
-	mva screenmem.river2,x screenmem.river2_end,x
-	mva screenmem.river3,x screenmem.river3_end,x
-	mva screenmem.river4,x screenmem.river4_end,x
-	mva screenmem.river5,x screenmem.river5_end,x
-	mva screenmem.river6,x screenmem.river6_end,x
-	mva screenmem.river7,x screenmem.river7_end,x
-	mva screenmem.river8,x screenmem.river8_end,x
-	mva screenmem.river9,x screenmem.river9_end,x
+	mva screenmem.river1,x screenmem.river1+(.len screenmem.river1),x
+	mva screenmem.river2,x screenmem.river2+(.len screenmem.river2),x
+	mva screenmem.river3,x screenmem.river3+(.len screenmem.river3),x
+	mva screenmem.river4,x screenmem.river4+(.len screenmem.river4),x
+	mva screenmem.river5,x screenmem.river5+(.len screenmem.river5),x
+	mva screenmem.river6,x screenmem.river6+(.len screenmem.river6),x
+	mva screenmem.river7,x screenmem.river7+(.len screenmem.river7),x
+	mva screenmem.river8,x screenmem.river8+(.len screenmem.river8),x
+	mva screenmem.river9,x screenmem.river9+(.len screenmem.river9),x
+	mva screenmem.river10,x screenmem.river10+(.len screenmem.river10),x
+	mva screenmem.road1,x screenmem.road1+(.len screenmem.road1),x
+	mva screenmem.road2,x screenmem.road2+(.len screenmem.road2),x
+	mva screenmem.road3,x screenmem.road3+(.len screenmem.road3),x
+	mva screenmem.road4,x screenmem.road4+(.len screenmem.road4),x
+	mva screenmem.road5,x screenmem.road5+(.len screenmem.road5),x
+	mva screenmem.road6,x screenmem.road6+(.len screenmem.road6),x
+	mva screenmem.road7,x screenmem.road7+(.len screenmem.road7),x
+	mva screenmem.road8,x screenmem.road8+(.len screenmem.road8),x
 	inx
 	cpx #60
 	bne copy_loop
@@ -59,6 +75,12 @@ copy_loop
 	; 
 	mva #$08 COLOR1
 	mva #$00 COLOR2
+
+	; init scrolling
+	mva #0 scroll_state[0].fine
+	mva #<(.len screenmem.river1) scroll_state[0].coarse
+	mva #15 scroll_state[1].fine
+	mva #0 scroll_state[1].coarse
 	
 	rts
 	
@@ -66,13 +88,13 @@ copy_loop
 
 	.proc main
 	
-	; Turn off screen
+	; Disable ANTIC DMA
 	mva #0 SDMCTL
 
 	jsr init
 
-	; Turn screen on
-	mva #35 SDMCTL	
+	; Enable ANTIC DMA - wide playfield, player DMA, single line player resolution
+	mva #%111011 SDMCTL	
 	
 	; Loop
 	jmp *
@@ -80,136 +102,140 @@ copy_loop
 	.endp	; main
 	
 	.local dli
-jumptable_lo
-	.byte	<begin_playfield
-	.byte	<scroll_log1
-	.byte	<scroll_log2
-	.byte	<scroll_log3
-	.byte	<begin_bank
-	.byte	<scroll_road1
-	.byte	<scroll_road2
-	.byte	<scroll_road3
-	.byte	<begin_footpath
-
-jumptable_hi
-	.byte	>begin_playfield
-	.byte	>scroll_log1
-	.byte	>scroll_log2
-	.byte	>scroll_log3
-	.byte	>begin_bank
-	.byte	>scroll_road1
-	.byte	>scroll_road2
-	.byte	>scroll_road3
-	.byte	>begin_footpath
-
-jumptable_idx
-	.byte	0
-	lda #>(charset)
-	.macro beginhandler
-	  sta registers.a
-	  stx registers.x
-	.endm
-	
-	.macro endhandler
-	  inc jumptable_idx
-	  ldx jumptable_idx
-	  lda jumptable_lo,x
-	  sta VDSLST
-	  lda jumptable_hi,x
-	  sta VDSLST+1
-	  lda registers.a
-	  ldx registers.x
-	  rti
-	.endm
-	
-	.macro set_colbk col
-	  lda :col
-	  sta WSYNC
-	  sta COLBK
-	.endm
-	
-	.macro set_hscroll amt
-	  lda :amt
-	  eor #15
-	  sta WSYNC
-	  sta HSCROL
-	.endm
-	
-	.macro set_colbk_hscroll col amt
-	  lda :col
-	  ldx :amt
-	  sta WSYNC
-	  sta COLBK
-	  stx HSCROL
-	.endm
 	
 	.proc begin_playfield
-	; switch to custom character set
-	beginhandler
-	lda #$83
-	ldx #>(charset)
+	sta registers.a
+	stx registers.x
+	ldx #>(charsets.river)
+	sta WSYNC
+	stx CHBASE
+	mwa #dli.river1 VDSLST
+	lda registers.a
+	ldx registers.x
+	rti
+	.endp	; begin_playfield
+
+	.proc river1
+	sta registers.a
+	stx registers.x
+	lda scroll_state[0].fine
+	ldx #$85
+	sta WSYNC
+	stx COLBK
+	sta HSCROL
+	mwa #dli.river2 VDSLST
+	lda registers.a
+	ldx registers.x
+	rti
+	.endp	; river1
+
+	.proc river2
+	sta registers.a
+	lda scroll_state[1].fine
+	eor #15
+	sta WSYNC
+	sta HSCROL
+	mwa #dli.river3 VDSLST
+	lda registers.a
+	rti
+	.endp	; river2
+
+	.proc river3
+	sta registers.a
+	lda scroll_state[2].fine
+	eor #15
+	sta WSYNC
+	sta HSCROL
+	mwa #dli.river4 VDSLST
+	lda registers.a
+	rti
+	.endp	; river3
+
+	.proc river4
+	sta registers.a
+	lda scroll_state[3].fine
+	eor #15
+	sta WSYNC
+	sta HSCROL
+	mwa #dli.river5 VDSLST
+	lda registers.a
+	rti
+	.endp	; river4
+
+	.proc river5
+	sta registers.a
+	lda scroll_state[4].fine
+	eor #15
+	sta WSYNC
+	sta HSCROL
+	mwa #dli.bank VDSLST
+	lda registers.a
+	rti
+	.endp	; river5
+	
+	.proc bank
+	sta registers.a
+	lda #$C6
 	sta WSYNC
 	sta COLBK
-	stx CHBASE
-	endhandler
-	.endp
-
-	.proc scroll_log1
-	beginhandler
-	;set_colbk_hscroll #$83 scroll_state[0].fine
-	set_hscroll scroll_state[0].fine
-	endhandler
-	.endp
-
-	.proc scroll_log2
-	beginhandler
-	set_hscroll scroll_state[1].fine
-	endhandler
-	.endp
-
-	.proc scroll_log3
-	beginhandler
-	set_hscroll scroll_state[0].fine
-	endhandler
-	.endp
-
-	.proc begin_bank
-	beginhandler
-	set_colbk #$C6
-	endhandler
-	.endp
+	mwa #dli.road1 VDSLST
+	lda registers.a
+	rti
+	.endp	; bank
 	
-	.proc scroll_road1
-	beginhandler
-	set_colbk_hscroll #$04 scroll_state[1].fine
-	endhandler
-	.endp
+	.proc road1
+	sta registers.a
+	lda #$08
+	sta WSYNC
+	sta COLBK
+	mwa #dli.road2 VDSLST
+	lda registers.a
+	rti
+	.endp	; road1
 	
-	.proc scroll_road2
-	beginhandler
-	set_colbk #$08
-	;set_hscroll scroll_state[4].fine
-	endhandler
-	.endp
+	.proc road2
+	sta registers.a
+	lda #$06
+	sta WSYNC
+	sta COLBK
+	mwa #dli.road3 VDSLST
+	lda registers.a
+	rti
+	.endp	; road2
 
-	.proc scroll_road3
-	beginhandler
-	set_colbk #$04
-	;set_hscroll scroll_state[5].fine
-	endhandler
-	.endp
+	.proc road3
+	sta registers.a
+	lda #$08
+	sta WSYNC
+	sta COLBK
+	mwa #dli.road4 VDSLST
+	lda registers.a
+	rti
+	.endp	; road3
+		
+	.proc road4
+	sta registers.a
+	lda #$06
+	sta WSYNC
+	sta COLBK
+	mwa #dli.path VDSLST
+	lda registers.a
+	rti
+	.endp	; road4
 	
-	.proc begin_footpath
-	beginhandler
-	set_colbk #$0e
-	endhandler
+	.proc path
+	sta registers.a
+	lda #$0B
+	sta WSYNC
+	sta COLBK
+	lda registers.a
+	rti
 	.endp
 	
 	.endl	; dli
 		
 	.proc vblank_handler
 	mwa #dli.begin_playfield VDSLST
-	mva #0 dli.jumptable_idx
 	dec vars.animtime
 	beq animate_playfield
 	jmp check_scroll
@@ -245,91 +271,60 @@ check_scroll
 	jmp exit
 	
 scroll_playfield
-	;
-	; - Scroll log1
+	; river row 1 - scroll left to right
 	inc scroll_state[0].fine
 	lda scroll_state[0].fine
 	cmp #4
-	bcs @+
-	sec
-	sbc #4
+	bmi @+1
+	lda #0
 	sta scroll_state[0].fine
-	inc scroll_state[0].coarse
+	dec scroll_state[0].coarse
 	lda scroll_state[0].coarse
-	cmp #(screenmem.river1_end - screenmem.river1)
 	bne @+
-	lda #0
+	lda #(.len screenmem.river1)
 	sta scroll_state[0].coarse
-@	lda scroll_state[0].coarse
-	sta dlist.river1
-	sta dlist.river2
-	sta dlist.river3
-	;
-	; - Scroll log2
-	dec scroll_state[1].fine
-	lda scroll_state[1].fine
-	bne @+
-	clc
-	adc #4
-	sta scroll_state[1].fine
-	dec scroll_state[1].coarse
-	lda scroll_state[1].coarse
-	cmp #0
-	bne @+
-	lda #(screenmem.river4_end - screenmem.river4)
-	sta scroll_state[1].coarse
-@	lda scroll_state[1].coarse
-	sta dlist.river4
-	sta dlist.river5
-	sta dlist.river6
-	;
-	; - Scroll log3
-	inc scroll_state[2].fine
-	lda scroll_state[2].fine
-	cmp #4
-	bcs @+
-	sec
-	sbc #4
-	sta scroll_state[2].fine
-	inc scroll_state[2].coarse
-	lda scroll_state[2].coarse
-	cmp #(screenmem.river7_end - screenmem.river7)
-	bne @+
-	lda #0
-	sta scroll_state[2].coarse
-@	lda scroll_state[2].coarse
-	sta dlist.river7
-	sta dlist.river8
-	sta dlist.river9
+@	sta dlist.river+1
+	sta dlist.river+4
 
-	mva #4 vars.scroll_delay
+	; river row 2 - scroll right to left
+@	inc scroll_state[1].fine
+	lda scroll_state[1].fine
+	cmp #16
+	bmi @+1
+	lda #12
+	sta scroll_state[1].fine
+	inc scroll_state[1].coarse
+	lda scroll_state[1].coarse 
+	cmp #<(.len screenmem.river2)
+	bmi @+
+	lda #0
+	sta scroll_state[1].coarse
+@	sta dlist.river+7
+	sta dlist.river+10
+	
+@	mva #4 vars.scroll_delay
 
 exit
 	jmp XITVBV
 	.endp	; vblank_handler 
 
 	; character sets
-	.align $400
 	.local charsets	
-text	.ds	$400
-river	.ds	$400
-road	.ds	$400
+	.align $400
+river	ins "river.chr"
 	.endl
 	
 	; Graphics
 	icl "graphics.asm"
-	icl "charset.asm"
  	
  	; Turtles
 	.local turtles
 bits	ins "turtle_strip.chr"
 framesl	.byte <(bits+$00),<(bits+$40),<(bits+$80),<(bits+$C0),<(bits+$100),<(bits+$140)
 framesh	.byte >(bits+$00),>(bits+$40),>(bits+$80),>(bits+$C0),>(bits+$100),>(bits+$140)
-chars	.word charset+$88
+chars	.word charsets.river+$88
 sequence
 	.byte 5, 5, 5, 5, 5, 4, 3, 2, 1, 0, 0, 0, 0, 1, 2, 3, 4, 5, $ff
 frame	.byte 0
 
 	.endl 
-	run main
-	

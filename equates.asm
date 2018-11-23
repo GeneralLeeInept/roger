@@ -1,4 +1,6 @@
 ; Atari 800 memory map equates
+;
+; @com.wudsn.ide.asm.mainsourcefile=roger.asm
 
 ; OS page zero
 RTCLOK	= $0012
